@@ -1,6 +1,7 @@
 {
     "name": "krbmsoft/gls",    
     "license": "MIT",
+	"minimum-stability" : "dev",	
     "authors": [
         {
             "name": "Meghlal Khan",
