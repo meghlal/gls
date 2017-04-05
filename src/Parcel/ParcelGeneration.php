@@ -163,7 +163,7 @@ class ParcelGeneration
 	
 	public function setReference($reference)
 	{
-		$this->Contactid = $contactid;
+		$this->Reference = $reference;
 		return $this;
 	}
 	
@@ -318,42 +318,48 @@ class ParcelGeneration
 	{
 		$f=0;
 		$err = array();
-		$pdata = array();
-		if(isset($parcels['Weight']) && $parcels['Weight']!='' )
-		{
-			$weight = (float)$parcels['Weight'];
-			if($weight <= 50.0)
-				$pdata['Weight'] = $parcels['Name1'];
+		$temp = array();
+		
+		foreach($parcels as $parcel) {
+			$pdata = array();
+			if(isset($parcel['Weight']) && $parcel['Weight']!='' )
+			{
+				$weight = (float)round($parcel['Weight'],2);
+				if($weight <= 50.0)
+					$pdata['Weight'] = $weight;
+				else
+					array_push($err, 'Weight must be less than euual to 50.0 kg');	
+			}
 			else
-				array_push($err, 'Weight must be less than euual to 50.0 kg');	
+			{
+				$f++;
+				array_push($err, 'Weight cannot be blank');
+			}
+			
+			if(isset($parcel['Reference']) && $parcel['Reference']!='')
+				if(strlen($parcel['Reference']) <=50)
+					$pdata['Reference'] = $parcel['Reference'];
+				else
+					array_push($err, 'Reference must be less than euual to 50');
+			
+			if(isset($parcel['Comment']) && $parcel['Comment']!='')
+				if(strlen($parcel['Comment']) <=40)
+					$pdata['Comment'] = $parcel['Comment'];
+				else
+					array_push($err, 'Comment must be less than euual to 40');
+			
+			if(isset($parcel['Cashservice']) && $parcel['Cashservice']!='')
+					$pdata['Cashservice'] = round($parcel['Cashservice'],2);
+			
+			if(isset($parcel['AddOnLiabilityService']) && $parcel['AddOnLiabilityService']!='')
+					$pdata['AddOnLiabilityService'] = round($parcel['AddOnLiabilityService'],2);
+					
+			if(!empty($pdata))
+				$temp[] = $pdata;
 		}
-		else
-		{
-			$f++;
-			array_push($err, 'Weight cannot be blank');
-		}
-		
-		if(isset($parcels['Reference']) && $parcels['Reference']!='')
-			if(strlen($parcels['Reference']) <=50)
-				$pdata['Reference'] = $parcels['Reference'];
-			else
-				array_push($err, 'Reference must be less than euual to 50');
-		
-		if(isset($parcels['Comment']) && $parcels['Comment']!='')
-			if(strlen($parcels['Comment']) <=40)
-				$pdata['Comment'] = $parcels['Comment'];
-			else
-				array_push($err, 'Comment must be less than euual to 40');
-		
-		if(isset($parcels['Cashservice']) && $parcels['Cashservice']!='')
-				$pdata['Cashservice'] = round($parcels['Cashservice'],2);
-		
-		if(isset($parcels['AddOnLiabilityService']) && $parcels['AddOnLiabilityService']!='')
-				$pdata['AddOnLiabilityService'] = round($parcels['AddOnLiabilityService'],2);	
-		
 		if($f == 0)
 		{			
-			$this->Parcels = $pdata;
+			$this->Parcels = $temp;
 			return $this;
 		}
 		else
@@ -407,21 +413,23 @@ class ParcelGeneration
 	public function getData($format = 'json')
 	{
 		$data = array();	
-		if($this->UserName !='' && $this->Password !='' && $this->Customerid !='' && $this->Contactid !='' && $this->ShipmentDate !='' && !empty($this->Addresses) && !empty($this->Parcels) && !empty($this->Services))
+		if($this->UserName !='' && $this->Password !='' && $this->Customerid !='' && $this->Contactid !='' && $this->ShipmentDate !='' && !empty($this->Addresses) && !empty($this->Parcels))
 		{
 			$data['UserName'] = $this->UserName;
 			$data['Password'] = $this->Password;
 			$data['Customerid'] = $this->Customerid;
 			$data['Contactid'] = $this->Contactid;
 			
-			if($data['ShipmentDate'] !='')
+			if(isset($data['ShipmentDate']) && $data['ShipmentDate'] !='')
 				$data['ShipmentDate'] = $this->ShipmentDate;
 				
-			if($data['Reference'] !='')
+			if(isset($data['Reference']) && $data['Reference'] !='')
 				$data['Reference'] = $this->Reference;
 			
 			$data['Addresses'] = $this->Addresses;
 			$data['Parcels'] = $this->Parcels;
+			
+			if(!empty($data['ShipmentDate']))
 			$data['Services'] = $this->Services;
 			
 			if($format == 'json')
@@ -437,10 +445,14 @@ class ParcelGeneration
 		$reqData = $this->getData('json');
 		try
 		{
-			$curl = new Curl();
+			$curl = new Curl\Curl();
 			$curl->setHeader('Content-Type', 'application/json');
 			$curl->post($this->APIendpoint, $reqData);
+			
 			if ($curl->error) {
+				print_r($curl);
+				print_r($curl->response_headers);
+			
 				return $curl->error_code;
 			}
 			else {
@@ -452,6 +464,11 @@ class ParcelGeneration
 			return $e;
 		}
 		
+	}
+	
+	public function t()
+	{
+		return time();
 	}
 	
 }
